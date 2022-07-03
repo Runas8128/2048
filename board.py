@@ -23,31 +23,31 @@ class Board:
         ]
         self.makeNewObj()
     
-    async def _makeRect(self, x: int, y: int):
-        realX =                self.margin + self.blockSize * y
-        realY = self.height - (self.margin + self.blockSize * (self.boardSize - x))
-        self.Objects[x][y].setRect(pygame.Rect(
-            realX, realY,
-            self.blockSize, self.blockSize
-        ))
+    async def doForCell(self, coro):
+        tasks = [
+            coro(x, y)
+            for x in range(self.boardSize)
+            for y in range(self.boardSize)
+        ]
+        await asyncio.gather(*tasks)
     
     async def loadRect(self):
-        tasks = [
-            self._makeRect(x, y)
-            for x in range(self.boardSize)
-            for y in range(self.boardSize)
-        ]
-        await asyncio.gather(*tasks)
+        async def _makeRect(self, x: int, y: int):
+            realX =                self.margin + self.blockSize * y
+            realY = self.height - (self.margin + self.blockSize * (self.boardSize - x))
+
+            self.Objects[x][y].setRect(pygame.Rect(
+                realX, realY,
+                self.blockSize, self.blockSize
+            ))
+        await self.doForCell(_makeRect)
 
     async def draw(self, screen: pygame.Surface):
-        tasks = [
-            self.Objects[x][y].draw(screen)
-            for x in range(self.boardSize)
-            for y in range(self.boardSize)
-        ]
-        await asyncio.gather(*tasks)
+        async def _draw(self, x: int, y: int):
+            await self.Objects[x][y].draw(screen)
+        await self.doForCell(self._draw)
     
-    def makeNewObj(self):
+    async def _makeNewObj(self):
         while True:
             r = randrange(self.boardSize)
             c = randrange(self.boardSize)
@@ -55,6 +55,12 @@ class Board:
             if self.Objects[r][c].value == 0:
                 self.Objects[r][c].make()
                 break
+    
+    async def makeNewObj(self, timeout: float=1.0):
+        try:
+            await asyncio.wait_for(self._makeNewObj(), timeout)
+        except asyncio.TimeoutError:
+            raise ValueError("Game Over")
     
     def alignLeft(self):
         obj = self.Objects
