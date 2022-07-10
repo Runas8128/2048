@@ -31,7 +31,7 @@ while True:
         
         elif event.key == pygame.K_LEFT:
             if board.alignLeft():
-                board.makeNewObj()
+                asyncio.run(board.makeNewObj())
             for ls in board.Objects:
                 for obj in ls:
                     print(obj.value, end=' ')
