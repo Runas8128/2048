@@ -24,6 +24,9 @@ class Board:
         asyncio.run(self.makeNewObj())
     
     async def doForCell(self, coro):
+        """|coro|
+        helper function for independent cell-by-cell works
+        """
         tasks = [
             coro(x, y)
             for x in range(self.boardSize)
@@ -32,6 +35,9 @@ class Board:
         await asyncio.gather(*tasks)
     
     async def loadRect(self):
+        """|coro|
+        load Rectangle object for each cell
+        """
         async def _makeRect(x: int, y: int):
             realX =                self.margin + self.blockSize * y
             realY = self.height - (self.margin + self.blockSize * (self.boardSize - x))
@@ -43,11 +49,17 @@ class Board:
         await self.doForCell(_makeRect)
 
     async def draw(self, screen: pygame.Surface):
+        """|coro|
+        draw each cells to `screen`
+        """
         async def _draw(x: int, y: int):
             await self.Objects[x][y].draw(screen)
         await self.doForCell(_draw)
     
     async def _makeNewObj(self):
+        """|coro|
+        try to make new object forever
+        """
         while True:
             r = randrange(self.boardSize)
             c = randrange(self.boardSize)
@@ -57,36 +69,102 @@ class Board:
                 break
     
     async def makeNewObj(self, timeout: float=1.0):
+        """|coro|
+        try to make new object with timeout
+
+        Raises `ValueError` if timeout(= game over)
+        """
         try:
             await asyncio.wait_for(self._makeNewObj(), timeout)
         except asyncio.TimeoutError:
             raise ValueError("Game Over")
     
+    def isCellEmpty(self, rIdx: int, cIdx: int):
+        """Return if Cell at (rIdx, cIdx) is empty"""
+        return self.Objects[rIdx][cIdx].value == 0
+    
+    def safeMove(self, tarPos: Tuple[int, int], dstPos: Tuple[int, int]):
+        """Move cell from dstPos to tarPos
+        Returns True if cell moved successfully, else False
+        """
+
+        # reject move if position is same
+        if tarPos == dstPos: return False
+
+        tar = self.Objects[tarPos[0]][tarPos[1]]
+        dst = self.Objects[dstPos[0]][dstPos[1]]
+        tar.value = dst.value
+        dst.remove()
+        print(f"safely moved: {dstPos} -> {tarPos}")
+        return True
+    
+    def merge(self, tarPos: Tuple[int, int], dstPos: Tuple[int, int]):
+        """Merge cells (dstPos -> tarPos), if can
+        Returns True if merged successfully, else False
+        """
+
+        # reject merge if position is same
+        if tarPos == dstPos:
+            print(f'reject merge: {tarPos} == {dstPos}')
+            return False
+
+        tar = self.Objects[tarPos[0]][tarPos[1]]
+        dst = self.Objects[dstPos[0]][dstPos[1]]
+
+        # reject merge if cell is already merged
+        if tar.dirty:
+            print(f'reject merge: {tarPos} is dirty')
+            return False
+
+        # reject merge if value is different
+        if tar.value != dst.value:
+            print(f'reject merge: {tar.value}@{tarPos} != {dst.value}@{dstPos}')
+            return False
+
+        # reject merge if one of cells is zero
+        if tar.value * dst.value == 0:
+            print(f'reject merge: one of cells is zero')
+            return False
+
+        tar.value *= 2
+        tar.dirty = True
+        dst.remove()
+        print(f'safely merged: {dstPos} -> {tarPos}')
+        return True
+    
+    def cleanBoard(self):
+        """clean all cells after merging"""
+
+        for rIdx in range(self.boardSize):
+            for cIdx in range(self.boardSize):
+                self.Objects[rIdx][cIdx].dirty = False
+    
     def alignLeft(self):
+        # Step 1. Set variables/aliases
         obj = self.Objects
         moved = False
 
+        # Step 2. Run for each row
         for rIdx in range(self.boardSize):
+            # Step 2-1. Set temp variables
             topBlank = 0
-            merged = False
             
+            # Step 2-2. Run sequentially for each column
             for cIdx in range(self.boardSize):
-                if obj[rIdx][cIdx].value == 0:
-                    continue
-                if cIdx != topBlank:
-                    obj[rIdx][topBlank].value = obj[rIdx][cIdx].value
-                    obj[rIdx][cIdx].remove()
-                    print(f"({rIdx}, {cIdx}) -> ({rIdx}, {topBlank})")
-
-                if topBlank != 0 and \
-                    obj[rIdx][topBlank-1].value == obj[rIdx][topBlank].value and\
-                    obj[rIdx][topBlank-1].value != 0:
-                    if not merged:
-                        obj[rIdx][topBlank-1].value *= 2
-                        obj[rIdx][topBlank].remove()
-                        topBlank -= 1
-                    merged = not merged
+                # Step 2-2-1. if cell is empty: move to next cell
+                if self.isCellEmpty(rIdx, cIdx): continue
                 
+                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
+                moved |= self.safeMove((rIdx, topBlank), (rIdx, cIdx))
+
+                # Step 2-2-3. if cells can merge and have not merged: merge cells
+                if topBlank > 0 and self.merge((rIdx, topBlank-1), (rIdx, topBlank)): topBlank -= 1
+                
+                # Step 2-2-4. cell is not empty so increase top-blank cell index
                 topBlank += 1
-                moved = True
+        
+        # Step 3. clean all cells
+        self.cleanBoard()
+        
+        # Step 4. if not moved, return False
         return moved

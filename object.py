@@ -7,6 +7,7 @@ class Object:
     def __init__(self):
         self.value = 0
         self.baseRect = None
+        self.dirty = False
     
     async def draw(self, screen: pygame.Surface):
         if self.baseRect != None:
