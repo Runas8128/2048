@@ -15,7 +15,7 @@ screen = pygame.display.set_mode((640, 740))
 title, titleRect = makeText("2048", "nanumgothicbold", 50, (320, 80))
 
 board = Board(8)
-asyncio.run(board.loadRect())
+board.loadRect()
 
 # Game loop
 while True:
@@ -41,7 +41,7 @@ while True:
     # Draw Things
     screen.fill((255, 255, 255))
     screen.blit(title, titleRect)
-    asyncio.run(board.draw(screen))
+    board.draw(screen)
 
     # Update Screen
     pygame.time.Clock().tick(60)

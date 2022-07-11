@@ -21,7 +21,9 @@ class Board:
             [Object() for y in range(boardSize)]
             for x in range(boardSize)
         ]
+
         asyncio.run(self.makeNewObj())
+        self.loadRect()
     
     async def doForCell(self, coro):
         """|coro|
@@ -34,10 +36,8 @@ class Board:
         ]
         await asyncio.gather(*tasks)
     
-    async def loadRect(self):
-        """|coro|
-        load Rectangle object for each cell
-        """
+    def loadRect(self):
+        """load Rectangle object for each cell"""
         async def _makeRect(x: int, y: int):
             realX =                self.margin + self.blockSize * y
             realY = self.height - (self.margin + self.blockSize * (self.boardSize - x))
@@ -46,15 +46,13 @@ class Board:
                 realX, realY,
                 self.blockSize, self.blockSize
             ))
-        await self.doForCell(_makeRect)
+        asyncio.run(self.doForCell(_makeRect))
 
-    async def draw(self, screen: pygame.Surface):
-        """|coro|
-        draw each cells to `screen`
-        """
+    def draw(self, screen: pygame.Surface):
+        """draw each cells to `screen`"""
         async def _draw(x: int, y: int):
             await self.Objects[x][y].draw(screen)
-        await self.doForCell(_draw)
+        asyncio.run(self.doForCell(_draw))
     
     async def _makeNewObj(self):
         """|coro|
