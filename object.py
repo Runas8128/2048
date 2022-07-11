@@ -9,7 +9,7 @@ class Object:
         self.baseRect = None
         self.dirty = False
     
-    async def draw(self, screen: pygame.Surface):
+    def draw(self, screen: pygame.Surface):
         if self.baseRect != None:
             pygame.draw.rect(screen, (0, 0, 0), self.baseRect, 3)
             if self.value != 0:

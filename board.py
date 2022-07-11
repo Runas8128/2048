@@ -51,7 +51,7 @@ class Board:
     def draw(self, screen: pygame.Surface):
         """draw each cells to `screen`"""
         async def _draw(x: int, y: int):
-            await self.Objects[x][y].draw(screen)
+            self.Objects[x][y].draw(screen)
         asyncio.run(self.doForCell(_draw))
     
     async def _makeNewObj(self):
@@ -132,10 +132,9 @@ class Board:
     
     def cleanBoard(self):
         """clean all cells after merging"""
-
-        for rIdx in range(self.boardSize):
-            for cIdx in range(self.boardSize):
-                self.Objects[rIdx][cIdx].dirty = False
+        async def _clean(x: int, y: int):
+            self.Objects[x][y].dirty = False
+        asyncio.run(self.doForCell(_clean))
     
     def alignLeft(self):
         # Step 1. Set variables/aliases
