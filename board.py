@@ -157,11 +157,8 @@ class Board:
                 # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
                 moved |= self.safeMove((rIdx, topBlank), (rIdx, cIdx))
 
-                # Step 2-2-3. if cells can merge and have not merged: merge cells
-                if topBlank > 0 and self.merge((rIdx, topBlank-1), (rIdx, topBlank)): topBlank -= 1
-                
-                # Step 2-2-4. cell is not empty so increase top-blank cell index
-                topBlank += 1
+                # Step 2-2-3. increase top-blank index if merge failed
+                if not(topBlank > 0 and self.merge((rIdx, topBlank-1), (rIdx, topBlank))): topBlank += 1
         
         # Step 3. clean all cells
         self.cleanBoard()
