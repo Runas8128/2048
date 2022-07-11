@@ -8,7 +8,7 @@ from util import Direction
 from object import Object
 
 class Board:
-    def __init__(self, boardSize: int):
+    def __init__(self, boardSize: int, debug: bool=False):
         assert 3 <= boardSize <= 8, "Not proper board size"
         
         self.boardSize = boardSize
@@ -24,7 +24,21 @@ class Board:
 
         asyncio.run(self.makeNewObj())
         self.loadRect()
+
+        self.keyMap = {
+            pygame.K_LEFT:  self.alignLeft,
+            pygame.K_RIGHT: self.alignRight
+        }
+
+        self.debug = debug
     
+    def logBoard(self):
+        for ls in self.Objects:
+            for obj in ls:
+                print(obj.value, end=' ')
+            print()
+        print('--------------------')
+
     async def doForCell(self, coro):
         """|coro|
         helper function for independent cell-by-cell works
@@ -162,3 +176,40 @@ class Board:
         
         # Step 4. if not moved, return False
         return moved
+    
+    def alignRight(self):
+        # Step 1. Set variables/aliases
+        obj = self.Objects
+        moved = False
+
+        # Step 2. Run for each row
+        for rIdx in range(self.boardSize):
+            # Step 2-1. Set temp variables
+            topBlank = self.boardSize - 1
+            
+            # Step 2-2. Run sequentially for each column
+            for cIdx in range(self.boardSize - 1, -1, -1):
+                # Step 2-2-1. if cell is empty: move to next cell
+                if self.isCellEmpty(rIdx, cIdx): continue
+                
+                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
+                moved |= self.safeMove((rIdx, topBlank), (rIdx, cIdx))
+
+                # Step 2-2-3. increase top-blank index if merge failed
+                if not(topBlank < self.boardSize - 1 and self.merge((rIdx, topBlank+1), (rIdx, topBlank))): topBlank -= 1
+        
+        # Step 3. clean all cells
+        self.cleanBoard()
+        
+        # Step 4. if not moved, return False
+        return moved
+    
+    def tryAlign(self, key: int):
+        if key not in self.keyMap.keys():
+            return
+        
+        if self.keyMap[key]():
+            asyncio.run(self.makeNewObj())
+        
+        if self.debug:
+            self.logBoard()

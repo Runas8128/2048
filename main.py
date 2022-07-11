@@ -14,7 +14,7 @@ screen = pygame.display.set_mode((640, 740))
 # Title text
 title, titleRect = makeText("2048", "nanumgothicbold", 50, (320, 80))
 
-board = Board(8)
+board = Board(8, debug=True)
 board.loadRect()
 
 # Game loop
@@ -29,14 +29,7 @@ while True:
         if event.key == pygame.K_ESCAPE:
             break
         
-        elif event.key == pygame.K_LEFT:
-            if board.alignLeft():
-                asyncio.run(board.makeNewObj())
-            for ls in board.Objects:
-                for obj in ls:
-                    print(obj.value, end=' ')
-                print()
-            print('-'*20)
+        board.tryAlign(event.key)
 
     # Draw Things
     screen.fill((255, 255, 255))
