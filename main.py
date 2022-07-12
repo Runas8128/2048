@@ -3,6 +3,7 @@ pygame.init()
 
 import random
 random.seed(0)
+
 import asyncio
 
 from board import Board
@@ -30,6 +31,7 @@ while True:
             break
         
         board.tryAlign(event.key)
+        board.checkOver()
 
     # Draw Things
     screen.fill((255, 255, 255))

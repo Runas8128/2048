@@ -15,8 +15,8 @@ class Board:
         
         self.width, self.height = pygame.display.get_window_size()
         self.blockSize = self.width // (self.boardSize + 1)
+        self.over = False
         
-        self.margin = self.blockSize // 2
         self.Objects: List[List[Object]] = [
             [Object() for y in range(boardSize)]
             for x in range(boardSize)
@@ -48,13 +48,15 @@ class Board:
             for x in range(self.boardSize)
             for y in range(self.boardSize)
         ]
-        await asyncio.gather(*tasks)
+        return await asyncio.gather(*tasks)
     
     def loadRect(self):
         """load Rectangle object for each cell"""
         async def _makeRect(x: int, y: int):
-            realX =                self.margin + self.blockSize * y
-            realY = self.height - (self.margin + self.blockSize * (self.boardSize - x))
+            margin = self.blockSize // 2
+
+            realX =                margin + self.blockSize * y
+            realY = self.height - (margin + self.blockSize * (self.boardSize - x))
 
             self.Objects[x][y].setRect(pygame.Rect(
                 realX, realY,
@@ -67,6 +69,9 @@ class Board:
         async def _draw(x: int, y: int):
             self.Objects[x][y].draw(screen)
         asyncio.run(self.doForCell(_draw))
+
+        if self.over:
+            screen.fill((255, 255, 255, 128))
     
     async def _makeNewObj(self):
         """|coro|
@@ -84,12 +89,12 @@ class Board:
         """|coro|
         try to make new object with timeout
 
-        Raises `ValueError` if timeout(= game over)
+        Raise gameover flag if timeout
         """
         try:
             await asyncio.wait_for(self._makeNewObj(), timeout)
         except asyncio.TimeoutError:
-            raise ValueError("Game Over")
+            self.over = True
     
     def isCellEmpty(self, rIdx: int, cIdx: int):
         """Return if Cell at (rIdx, cIdx) is empty"""
@@ -213,3 +218,10 @@ class Board:
         
         if self.debug:
             self.logBoard()
+    
+    def checkOver(self):
+        async def checkIfCellNotBlank(x: int, y: int):
+            return self.Objects[x][y].value != 0
+        if all(asyncio.run(self.doForCell(checkIfCellNotBlank))):
+            self.over = True
+
