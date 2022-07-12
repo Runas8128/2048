@@ -27,7 +27,9 @@ class Board:
 
         self.keyMap = {
             pygame.K_LEFT:  self.alignLeft,
-            pygame.K_RIGHT: self.alignRight
+            pygame.K_RIGHT: self.alignRight,
+            pygame.K_UP:    self.alignUp,
+            pygame.K_DOWN:  self.alignDown
         }
 
         self.debug = debug
@@ -209,6 +211,60 @@ class Board:
         # Step 4. if not moved, return False
         return moved
     
+    def alignUp(self):
+        # Step 1. Set variables/aliases
+        obj = self.Objects
+        moved = False
+
+        # Step 2. Run for each column
+        for cIdx in range(self.boardSize):
+            # Step 2-1. Set temp variables
+            topBlank = 0
+            
+            # Step 2-2. Run sequentially for each row
+            for rIdx in range(self.boardSize):
+                # Step 2-2-1. if cell is empty: move to next cell
+                if self.isCellEmpty(rIdx, cIdx): continue
+                
+                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
+                moved |= self.safeMove((topBlank, cIdx), (rIdx, cIdx))
+
+                # Step 2-2-3. increase top-blank index if merge failed
+                if not(topBlank > 0 and self.merge((topBlank-1, cIdx), (topBlank, cIdx))): topBlank += 1
+        
+        # Step 3. clean all cells
+        self.cleanBoard()
+        
+        # Step 4. if not moved, return False
+        return moved
+    
+    def alignDown(self):
+        # Step 1. Set variables/aliases
+        obj = self.Objects
+        moved = False
+
+        # Step 2. Run for each column
+        for cIdx in range(self.boardSize):
+            # Step 2-1. Set temp variables
+            topBlank = self.boardSize - 1
+            
+            # Step 2-2. Run sequentially for each row
+            for rIdx in range(self.boardSize - 1, -1, -1):
+                # Step 2-2-1. if cell is empty: move to next cell
+                if self.isCellEmpty(rIdx, cIdx): continue
+                
+                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
+                moved |= self.safeMove((topBlank, cIdx), (rIdx, cIdx))
+
+                # Step 2-2-3. increase top-blank index if merge failed
+                if not(topBlank < self.boardSize - 1 and self.merge((topBlank+1, cIdx), (topBlank, cIdx))): topBlank -= 1
+        
+        # Step 3. clean all cells
+        self.cleanBoard()
+        
+        # Step 4. if not moved, return False
+        return moved
+
     def tryAlign(self, key: int):
         if key not in self.keyMap.keys():
             return
@@ -224,4 +280,3 @@ class Board:
             return self.Objects[x][y].value != 0
         if all(asyncio.run(self.doForCell(checkIfCellNotBlank))):
             self.over = True
-
