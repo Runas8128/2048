@@ -4,7 +4,6 @@ from random import randrange
 import asyncio
 import pygame
 
-from util import Direction
 from object import Object
 
 class Board:
