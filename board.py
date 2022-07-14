@@ -176,7 +176,9 @@ class Board:
                 moved |= self.safeMove((rIdx, topBlank), (rIdx, cIdx))
 
                 # Step 2-2-3. increase top-blank index if merge failed
-                if not(topBlank > 0 and self.merge((rIdx, topBlank-1), (rIdx, topBlank))): topBlank += 1
+                merged = topBlank > 0 and self.merge((rIdx, topBlank-1), (rIdx, topBlank))
+                moved |= merged
+                if not merged: topBlank += 1
         
         # Step 3. clean all cells
         self.cleanBoard()
@@ -203,7 +205,9 @@ class Board:
                 moved |= self.safeMove((rIdx, topBlank), (rIdx, cIdx))
 
                 # Step 2-2-3. increase top-blank index if merge failed
-                if not(topBlank < self.boardSize - 1 and self.merge((rIdx, topBlank+1), (rIdx, topBlank))): topBlank -= 1
+                merged = topBlank < self.boardSize - 1 and self.merge((rIdx, topBlank+1), (rIdx, topBlank))
+                moved |= merged
+                if not merged: topBlank -= 1
         
         # Step 3. clean all cells
         self.cleanBoard()
@@ -230,7 +234,9 @@ class Board:
                 moved |= self.safeMove((topBlank, cIdx), (rIdx, cIdx))
 
                 # Step 2-2-3. increase top-blank index if merge failed
-                if not(topBlank > 0 and self.merge((topBlank-1, cIdx), (topBlank, cIdx))): topBlank += 1
+                merged = topBlank > 0 and self.merge((topBlank-1, cIdx), (topBlank, cIdx))
+                moved |= merged
+                if not merged: topBlank += 1
         
         # Step 3. clean all cells
         self.cleanBoard()
@@ -257,7 +263,9 @@ class Board:
                 moved |= self.safeMove((topBlank, cIdx), (rIdx, cIdx))
 
                 # Step 2-2-3. increase top-blank index if merge failed
-                if not(topBlank < self.boardSize - 1 and self.merge((topBlank+1, cIdx), (topBlank, cIdx))): topBlank -= 1
+                merged = topBlank < self.boardSize - 1 and self.merge((topBlank+1, cIdx), (topBlank, cIdx))
+                moved |= merged
+                if not merged: topBlank -= 1
         
         # Step 3. clean all cells
         self.cleanBoard()
