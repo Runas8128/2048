@@ -1,6 +1,4 @@
 from typing import Tuple
-from enum import Enum, auto
-
 import pygame
 
 def makeText(text: str, font: str, size: int, center: Tuple[int]):

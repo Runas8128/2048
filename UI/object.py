@@ -1,7 +1,7 @@
-import pygame
 import random
+import pygame
 
-from util import makeText
+from .util import makeText
 
 class Object:
     def __init__(self):

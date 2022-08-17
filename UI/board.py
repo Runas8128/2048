@@ -4,10 +4,10 @@ from random import randrange
 import asyncio
 import pygame
 
-from object import Object
+from .object import Object
 
 class Board:
-    def __init__(self, boardSize: int, debug: bool=False):
+    def __init__(self, boardSize: int, debug: bool):
         assert 3 <= boardSize <= 8, "Not proper board size"
         
         self.boardSize = boardSize
@@ -86,14 +86,14 @@ class Board:
                 self.Objects[r][c].make()
                 break
     
-    async def makeNewObj(self, timeout: float=1.0):
+    async def makeNewObj(self):
         """|coro|
         try to make new object with timeout
 
         Raise gameover flag if timeout
         """
         try:
-            await asyncio.wait_for(self._makeNewObj(), timeout)
+            await asyncio.wait_for(self._makeNewObj(), 1.0)
         except asyncio.TimeoutError:
             self.over = True
     
@@ -113,7 +113,8 @@ class Board:
         dst = self.Objects[dstPos[0]][dstPos[1]]
         tar.value = dst.value
         dst.remove()
-        print(f"safely moved: {dstPos} -> {tarPos}")
+        if self.debug:
+            print(f"safely moved: {dstPos} -> {tarPos}")
         return True
     
     def merge(self, tarPos: Tuple[int, int], dstPos: Tuple[int, int]):
@@ -123,7 +124,8 @@ class Board:
 
         # reject merge if position is same
         if tarPos == dstPos:
-            print(f'reject merge: {tarPos} == {dstPos}')
+            if self.debug:
+                print(f'reject merge: {tarPos} == {dstPos}')
             return False
 
         tar = self.Objects[tarPos[0]][tarPos[1]]
@@ -131,23 +133,27 @@ class Board:
 
         # reject merge if cell is already merged
         if tar.dirty:
-            print(f'reject merge: {tarPos} is dirty')
+            if self.debug:
+                print(f'reject merge: {tarPos} is dirty')
             return False
 
         # reject merge if value is different
         if tar.value != dst.value:
-            print(f'reject merge: {tar.value}@{tarPos} != {dst.value}@{dstPos}')
+            if self.debug:
+                print(f'reject merge: {tar.value}@{tarPos} != {dst.value}@{dstPos}')
             return False
 
         # reject merge if one of cells is zero
         if tar.value * dst.value == 0:
-            print(f'reject merge: one of cells is zero')
+            if self.debug:
+                print(f'reject merge: one of cells is zero')
             return False
 
         tar.value *= 2
         tar.dirty = True
         dst.remove()
-        print(f'safely merged: {dstPos} -> {tarPos}')
+        if self.debug:
+            print(f'safely merged: {dstPos} -> {tarPos}')
         return True
     
     def cleanBoard(self):
