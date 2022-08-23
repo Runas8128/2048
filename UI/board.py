@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Dict, Union
+from typing import List, Optional, Tuple, Dict, Union, Callable
 
 from random import randrange
 import asyncio
@@ -162,28 +162,50 @@ class Board:
             self.Objects[x][y].dirty = False
         asyncio.run(self.doForCell(_clean))
     
-    def alignLeft(self):
+    def align_base(
+        self,
+        target: Tuple[int, int],
+        move: Tuple[int, int],
+        merge_pred: bool,
+        merge: Tuple[int, int]
+    ):
+        """This provides basic move/merge logic"""
+
+        if self.isCellEmpty(*target): return False
+
+        moved = self.safeMove(move, target)
+        merged = merge_pred and self.merge(merge, target)
+        moved |= merged
+        return moved, merged
+    
+    def moveAll_synced(self, reverse_second: bool, ):
         # Step 1. Set variables/aliases
-        obj = self.Objects
         moved = False
 
-        # Step 2. Run for each row
-        for rIdx in range(self.boardSize):
+        # Step 2. Run for each column
+        for cIdx in range(self.boardSize):
             # Step 2-1. Set temp variables
-            topBlank = 0
+            topBlank = self.boardSize - 1
             
-            # Step 2-2. Run sequentially for each column
-            for cIdx in range(self.boardSize):
-                # Step 2-2-1. if cell is empty: move to next cell
-                if self.isCellEmpty(rIdx, cIdx): continue
-                
-                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
-                moved |= self.safeMove((rIdx, topBlank), (rIdx, cIdx))
+            # Step 2-2. Run sequentially for each row
+            for rIdx in range(self.boardSize - 1, -1, -1):
+                # Step 2-2-1. simply move and merge block at (rIdx, cIdx)
+                _moved, _merged = self.align_base((rIdx, cIdx), (topBlank, cIdx), topBlank < self.boardSize - 1, (topBlank+1, cIdx))
+                moved |= _merged
 
-                # Step 2-2-3. increase top-blank index if merge failed
-                merged = topBlank > 0 and self.merge((rIdx, topBlank-1), (rIdx, topBlank))
-                moved |= merged
-                if not merged: topBlank += 1
+                # Step 2-2-2. inc/dec top-blank index if merge failed
+                if not _merged: topBlank -= 1
+
+    def alignLeft(self):
+        moved = False
+
+        for rIdx in range(self.boardSize):
+            topBlank = 0
+
+            for cIdx in range(self.boardSize):
+                _moved, _merged = self.align_base((rIdx, cIdx), (rIdx, topBlank), topBlank > 0, (rIdx, topBlank-1))
+                moved |= _moved
+                if not _merged: topBlank += 1
         
         # Step 3. clean all cells
         self.cleanBoard()
@@ -192,25 +214,13 @@ class Board:
         return moved
     
     def alignRight(self):
-        # Step 1. Set variables/aliases
-        obj = self.Objects
         moved = False
 
-        # Step 2. Run for each row
         for rIdx in range(self.boardSize):
-            # Step 2-1. Set temp variables
             topBlank = self.boardSize - 1
             
-            # Step 2-2. Run sequentially for each column
             for cIdx in range(self.boardSize - 1, -1, -1):
-                # Step 2-2-1. if cell is empty: move to next cell
-                if self.isCellEmpty(rIdx, cIdx): continue
-                
-                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
-                moved |= self.safeMove((rIdx, topBlank), (rIdx, cIdx))
-
-                # Step 2-2-3. increase top-blank index if merge failed
-                merged = topBlank < self.boardSize - 1 and self.merge((rIdx, topBlank+1), (rIdx, topBlank))
+                _moved, _merged = self.align_base((rIdx, cIdx), (rIdx, topBlank), topBlank < self.boardSize - 1, (rIdx, topBlank+1))
                 moved |= merged
                 if not merged: topBlank -= 1
         
@@ -221,25 +231,13 @@ class Board:
         return moved
     
     def alignUp(self):
-        # Step 1. Set variables/aliases
-        obj = self.Objects
         moved = False
 
-        # Step 2. Run for each column
         for cIdx in range(self.boardSize):
-            # Step 2-1. Set temp variables
             topBlank = 0
             
-            # Step 2-2. Run sequentially for each row
             for rIdx in range(self.boardSize):
-                # Step 2-2-1. if cell is empty: move to next cell
-                if self.isCellEmpty(rIdx, cIdx): continue
-                
-                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
-                moved |= self.safeMove((topBlank, cIdx), (rIdx, cIdx))
-
-                # Step 2-2-3. increase top-blank index if merge failed
-                merged = topBlank > 0 and self.merge((topBlank-1, cIdx), (topBlank, cIdx))
+                _moved, _merged = self.align_base((rIdx, cIdx), (topBlank, cIdx), topBlank > 0, (topBlank-1, cIdx))
                 moved |= merged
                 if not merged: topBlank += 1
         
@@ -251,7 +249,6 @@ class Board:
     
     def alignDown(self):
         # Step 1. Set variables/aliases
-        obj = self.Objects
         moved = False
 
         # Step 2. Run for each column
@@ -261,16 +258,12 @@ class Board:
             
             # Step 2-2. Run sequentially for each row
             for rIdx in range(self.boardSize - 1, -1, -1):
-                # Step 2-2-1. if cell is empty: move to next cell
-                if self.isCellEmpty(rIdx, cIdx): continue
-                
-                # Step 2-2-2. if cell can move: move cell to fittest cell and raise `moved` flag
-                moved |= self.safeMove((topBlank, cIdx), (rIdx, cIdx))
+                # Step 2-2-1. simply move and merge block at (rIdx, cIdx)
+                _moved, _merged = self.align_base((rIdx, cIdx), (topBlank, cIdx), topBlank < self.boardSize - 1, (topBlank+1, cIdx))
+                moved |= _merged
 
-                # Step 2-2-3. increase top-blank index if merge failed
-                merged = topBlank < self.boardSize - 1 and self.merge((topBlank+1, cIdx), (topBlank, cIdx))
-                moved |= merged
-                if not merged: topBlank -= 1
+                # Step 2-2-2. inc/dec top-blank index if merge failed
+                if not _merged: topBlank -= 1
         
         # Step 3. clean all cells
         self.cleanBoard()
